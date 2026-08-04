@@ -3,20 +3,35 @@ const SUPABASE_URL = "https://nflgvgekvlihbciwiluz.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mbGd2Z2VrdmxpaGJjaXdpbHV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3OTI3NDksImV4cCI6MjEwMTM2ODc0OX0.Dv51jnRlvJeh7ZHlikdBaidaGeU6wRIxwMTBNrUU79g";
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+const categoryIcons = {
+  '국&찌개': '🍲',
+  '볶음&조림': '🍳',
+  '밥류': '🍚',
+  '면류': '🍜',
+  '기타': '🍴'
+};
+
 // 상태 변수
 let currentDate = new Date();
 let selectedDateStr = null;
 let currentTab = 'menu';
 let menuMode = 'weekly';
 
-// 레시피 북 상태
+// 식사 입력 상태
+let selectedMealType = 'home';
+let selectedMealIcon = '🍲';
+let pickerSelectedCat = '국&찌개';
+
+// 레시피 상태
 let currentRecipeCategory = '국&찌개';
 let currentCategoryRecipes = []; 
 let currentRecipeIndex = 0;       
+let editingRecipeId = null;
+let selectedDifficulty = 1;
 
 let calModalDate = new Date();
 
-// DOM 요소
+// DOM
 const weeklyView = document.getElementById('weekly-view');
 const monthlyView = document.getElementById('monthly-view');
 const recipeView = document.getElementById('recipe-view');
@@ -29,7 +44,6 @@ const tabShopping = document.getElementById('tab-shopping');
 const btnWeekly = document.getElementById('btn-weekly');
 const btnMonthly = document.getElementById('btn-monthly');
 
-// 주차 계산 함수
 function getWeekInfo(d) {
   const date = new Date(d);
   const year = date.getFullYear();
@@ -40,7 +54,6 @@ function getWeekInfo(d) {
   return { year, month, weekNum };
 }
 
-// 월요일 구하기 함수
 function getMonday(d) {
   const date = new Date(d);
   const day = date.getDay();
@@ -48,7 +61,6 @@ function getMonday(d) {
   return new Date(date.setDate(diff));
 }
 
-// 메인 탭 전환
 tabMenu.addEventListener('click', () => switchMainTab('menu'));
 tabRecipe.addEventListener('click', () => switchMainTab('recipe'));
 tabShopping.addEventListener('click', () => switchMainTab('shopping'));
@@ -75,7 +87,6 @@ function switchMainTab(tab) {
   }
 }
 
-// 상단 토글 (주간/월간)
 btnWeekly.addEventListener('click', () => switchMenuMode('weekly'));
 btnMonthly.addEventListener('click', () => switchMenuMode('monthly'));
 
@@ -220,13 +231,21 @@ async function renderWeeklyView() {
     const meal = mealsMap[dateStr];
     const isToday = dateStr === new Date().toISOString().split('T')[0];
     const card = document.createElement('div');
-    card.className = `day-card ${isToday ? 'today' : ''}`;
+    
+    const mealTypeClass = meal?.meal_type ? `meal-${meal.meal_type}` : '';
+    card.className = `day-card ${isToday ? 'today' : ''} ${mealTypeClass}`;
+
+    let displayMenu = '메뉴를 등록해 보세요';
+    if (meal?.menu_name) {
+      const icon = meal.icon || '🍲';
+      displayMenu = `${icon} ${meal.menu_name}`;
+    }
 
     card.innerHTML = `
-      <div class="day-info" onclick="openMealModal('${dateStr}', '${meal?.menu_name || ''}')">
+      <div class="day-info" onclick="openMealModal('${dateStr}', '${meal?.menu_name || ''}', '${meal?.icon || '🍲'}', '${meal?.meal_type || 'home'}')">
         <span class="day-name">${dateStr.slice(5)} (${dayNames[idx]})</span>
         <span class="menu-text ${!meal?.menu_name ? 'empty' : ''}">
-          ${meal?.menu_name || '메뉴를 등록해 보세요'}
+          ${displayMenu}
         </span>
       </div>
     `;
@@ -235,26 +254,136 @@ async function renderWeeklyView() {
 }
 
 // 식사 입력 모달
-async function openMealModal(dateStr, currentMenu) {
+async function openMealModal(dateStr, currentMenu, currentIcon, currentType) {
   selectedDateStr = dateStr;
   document.getElementById('modal-date-title').innerText = `${dateStr} 저녁메뉴`;
   document.getElementById('meal-input').value = currentMenu;
-  
-  const { data: recipes } = await db.from('recipes').select('*');
-  const dropdown = document.getElementById('recipe-dropdown');
-  dropdown.innerHTML = '<option value="">-- 레시피 선택 --</option>';
-  (recipes || []).forEach(r => {
-    dropdown.innerHTML += `<option value="${r.title}">${r.title}</option>`;
-  });
+
+  selectedMealType = currentType || 'home';
+  selectedMealIcon = currentIcon || '🍲';
+
+  updateMealTypeUI();
+
+  const deleteBtn = document.getElementById('btn-delete-meal');
+  if (currentMenu) {
+    deleteBtn.classList.remove('hidden');
+  } else {
+    deleteBtn.classList.add('hidden');
+  }
 
   document.getElementById('meal-modal').classList.remove('hidden');
 }
 
-document.getElementById('recipe-dropdown').addEventListener('change', (e) => {
-  if (e.target.value) {
-    document.getElementById('meal-input').value = e.target.value;
-  }
+document.getElementById('btn-delete-meal').addEventListener('click', async () => {
+  if (!selectedDateStr) return;
+
+  await db.from('meals').delete().eq('date', selectedDateStr);
+  document.getElementById('meal-modal').classList.add('hidden');
+
+  if (menuMode === 'weekly') renderWeeklyView();
+  else renderMonthlyView();
 });
+
+document.querySelectorAll('.meal-type-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    selectedMealType = e.target.getAttribute('data-type');
+    if (selectedMealType === 'delivery') selectedMealIcon = '🛵';
+    else if (selectedMealType === 'out') selectedMealIcon = '🍽️';
+    else selectedMealIcon = '🍲';
+
+    updateMealTypeUI();
+  });
+});
+
+document.querySelectorAll('.icon-opt').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    document.querySelectorAll('.icon-opt').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    selectedMealIcon = e.target.getAttribute('data-icon');
+  });
+});
+
+function updateMealTypeUI() {
+  document.querySelectorAll('.meal-type-btn').forEach(b => {
+    if (b.getAttribute('data-type') === selectedMealType) b.classList.add('active');
+    else b.classList.remove('active');
+  });
+
+  const iconGroup = document.getElementById('icon-select-group');
+  const recipeBox = document.getElementById('recipe-select-box');
+
+  if (selectedMealType === 'home') {
+    iconGroup.classList.remove('hidden');
+    recipeBox.classList.remove('hidden');
+
+    document.querySelectorAll('.icon-opt').forEach(b => {
+      if (b.getAttribute('data-icon') === selectedMealIcon) b.classList.add('active');
+      else b.classList.remove('active');
+    });
+  } else {
+    iconGroup.classList.add('hidden');
+    recipeBox.classList.add('hidden');
+  }
+}
+
+// 🌟 레시피 선택 서브 팝업 5등분 이모티콘 탭
+document.getElementById('btn-open-recipe-picker').addEventListener('click', () => {
+  pickerSelectedCat = '국&찌개';
+  updateRecipePickerUI();
+  document.getElementById('recipe-picker-modal').classList.remove('hidden');
+});
+
+document.getElementById('btn-close-recipe-picker').addEventListener('click', () => {
+  document.getElementById('recipe-picker-modal').classList.add('hidden');
+});
+
+document.querySelectorAll('.picker-cat-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    pickerSelectedCat = e.target.getAttribute('data-cat');
+    updateRecipePickerUI();
+  });
+});
+
+async function updateRecipePickerUI() {
+  document.querySelectorAll('.picker-cat-btn').forEach(b => {
+    if (b.getAttribute('data-cat') === pickerSelectedCat) b.classList.add('active');
+    else b.classList.remove('active');
+  });
+
+  document.getElementById('picker-cat-title').innerText = `[${pickerSelectedCat}] 레시피 목록`;
+
+  const { data: recipes } = await db.from('recipes')
+    .select('*')
+    .eq('category', pickerSelectedCat)
+    .order('sort_order', { ascending: true });
+
+  const listContainer = document.getElementById('picker-recipe-list');
+  listContainer.innerHTML = '';
+
+  if (!recipes || recipes.length === 0) {
+    listContainer.innerHTML = `<div style="text-align:center; padding:20px; color:#a09588; font-size:0.95rem;">이 카테고리엔 레시피가 없어요!</div>`;
+    return;
+  }
+
+  recipes.forEach(r => {
+    const icon = categoryIcons[r.category] || '📖';
+    const card = document.createElement('div');
+    card.className = 'picker-recipe-card';
+    card.innerHTML = `<span>${icon} ${r.title}</span><span style="font-size:0.85rem; color:#f4a261;">선택</span>`;
+    
+    card.onclick = () => {
+      document.getElementById('meal-input').value = r.title;
+      selectedMealIcon = icon;
+      document.querySelectorAll('.icon-opt').forEach(b => {
+        if (b.getAttribute('data-icon') === icon) b.classList.add('active');
+        else b.classList.remove('active');
+      });
+      document.getElementById('recipe-picker-modal').classList.add('hidden');
+    };
+
+    listContainer.appendChild(card);
+  });
+}
 
 document.getElementById('btn-close-modal').addEventListener('click', () => {
   document.getElementById('meal-modal').classList.add('hidden');
@@ -263,7 +392,12 @@ document.getElementById('btn-close-modal').addEventListener('click', () => {
 document.getElementById('btn-save-meal').addEventListener('click', async () => {
   const menuName = document.getElementById('meal-input').value.trim();
   if (menuName) {
-    await db.from('meals').upsert({ date: selectedDateStr, menu_name: menuName }, { onConflict: 'date' });
+    await db.from('meals').upsert({ 
+      date: selectedDateStr, 
+      menu_name: menuName, 
+      icon: selectedMealIcon,
+      meal_type: selectedMealType 
+    }, { onConflict: 'date' });
   } else {
     await db.from('meals').delete().eq('date', selectedDateStr);
   }
@@ -312,18 +446,19 @@ async function renderMonthlyView() {
     const isToday = dateStr === todayStr;
 
     const cell = document.createElement('div');
-    cell.className = `month-day-cell ${isToday ? 'today' : ''}`;
-    cell.onclick = () => openMealModal(dateStr, meal?.menu_name || '');
+    const mealTypeClass = meal?.meal_type ? `meal-${meal.meal_type}` : '';
+    cell.className = `month-day-cell ${isToday ? 'today' : ''} ${mealTypeClass}`;
+    cell.onclick = () => openMealModal(dateStr, meal?.menu_name || '', meal?.icon || '🍲', meal?.meal_type || 'home');
 
     cell.innerHTML = `
       <div class="month-day-number">${d}</div>
-      ${meal ? `<div class="month-menu-preview">${meal.menu_name}</div>` : ''}
+      ${meal ? `<div class="month-menu-icon">${meal.icon || '🍲'}</div>` : ''}
     `;
     grid.appendChild(cell);
   }
 }
 
-// === 📖 레시피 북 (카테고리 연동 / 목차 / 상세 / 넘기기 / 삭제) ===
+// === 📖 레시피 북 ===
 document.querySelectorAll('.bookmark-tab').forEach(tab => {
   tab.addEventListener('click', (e) => {
     document.querySelectorAll('.bookmark-tab').forEach(t => t.classList.remove('active'));
@@ -340,17 +475,18 @@ async function loadRecipes() {
   const { data: recipes } = await db.from('recipes')
     .select('*')
     .eq('category', currentRecipeCategory)
+    .order('sort_order', { ascending: true })
     .order('created_at', { ascending: false });
 
   currentCategoryRecipes = recipes || [];
   showTocPage();
 }
 
-// 목차 뷰
 function showTocPage() {
   document.getElementById('recipe-toc-page').classList.remove('hidden');
   document.getElementById('recipe-detail-page').classList.add('hidden');
   document.getElementById('toc-cat-name').innerText = currentRecipeCategory;
+  document.getElementById('toc-icon').innerText = categoryIcons[currentRecipeCategory] || '📋';
 
   const tocList = document.getElementById('toc-list');
   tocList.innerHTML = '';
@@ -363,13 +499,42 @@ function showTocPage() {
   currentCategoryRecipes.forEach((r, idx) => {
     const item = document.createElement('div');
     item.className = 'toc-item';
-    item.innerHTML = `<span>✏️ ${r.title}</span><span style="color:#e07a5f; font-size:1.1rem;">▶</span>`;
-    item.onclick = () => openRecipeDetail(idx);
+
+    const stars = '★'.repeat(r.difficulty || 1) + '☆'.repeat(5 - (r.difficulty || 1));
+
+    item.innerHTML = `
+      <div class="toc-item-left" onclick="openRecipeDetail(${idx})">
+        <span>${idx + 1}. ${r.title}</span>
+      </div>
+      <div class="toc-item-right">
+        <span class="toc-difficulty">${stars}</span>
+        <div class="toc-order-btns">
+          <button class="order-btn" onclick="moveRecipeOrder(${idx}, -1)">▲</button>
+          <button class="order-btn" onclick="moveRecipeOrder(${idx}, 1)">▼</button>
+        </div>
+      </div>
+    `;
     tocList.appendChild(item);
   });
 }
 
-// 상세 레시피 뷰
+async function moveRecipeOrder(index, direction) {
+  const targetIndex = index + direction;
+  if (targetIndex < 0 || targetIndex >= currentCategoryRecipes.length) return;
+
+  const currentRecipe = currentCategoryRecipes[index];
+  const targetRecipe = currentCategoryRecipes[targetIndex];
+
+  const tempOrder = currentRecipe.sort_order || index;
+  currentRecipe.sort_order = targetRecipe.sort_order || targetIndex;
+  targetRecipe.sort_order = tempOrder;
+
+  await db.from('recipes').update({ sort_order: currentRecipe.sort_order }).eq('id', currentRecipe.id);
+  await db.from('recipes').update({ sort_order: targetRecipe.sort_order }).eq('id', targetRecipe.id);
+
+  await loadRecipes();
+}
+
 function openRecipeDetail(index) {
   currentRecipeIndex = index;
   document.getElementById('recipe-toc-page').classList.add('hidden');
@@ -377,17 +542,29 @@ function openRecipeDetail(index) {
   renderRecipeDetail();
 }
 
+// 🌟 상세 레시피 줄밀림 완전 차단 (각 섹션 36px 라인피팅)
 function renderRecipeDetail() {
   const r = currentCategoryRecipes[currentRecipeIndex];
   if (!r) return showTocPage();
 
-  document.getElementById('detail-title').innerText = `✏️ ${r.title}`;
+  document.getElementById('detail-title').innerText = `${currentRecipeIndex + 1}. ${r.title}`;
   
-  // 36px 줄 간격 피팅
-  document.getElementById('detail-body').innerHTML = `
-    ${r.ingredients ? `<div style="color:#e07a5f; line-height:36px;">[필요한 재료]</div><div style="line-height:36px;">${r.ingredients}</div>` : ''}
-    ${r.instructions ? `<div style="color:#e07a5f; line-height:36px; margin-top:36px;">[조리법 & 팁]</div><div style="line-height:36px;">${r.instructions}</div>` : ''}
-  `;
+  let bodyHtml = '';
+  if (r.ingredients) {
+    bodyHtml += `<div class="recipe-note-section-title">[재료]</div><div class="recipe-note-text">${r.ingredients}</div>`;
+  }
+  if (r.sauce) {
+    bodyHtml += `<div class="recipe-note-section-title" style="margin-top:36px;">[양념장]</div><div class="recipe-note-text">${r.sauce}</div>`;
+  }
+  if (r.instructions) {
+    bodyHtml += `<div class="recipe-note-section-title" style="margin-top:36px;">[조리법 & 팁]</div><div class="recipe-note-text">${r.instructions}</div>`;
+  }
+
+  document.getElementById('detail-body').innerHTML = bodyHtml;
+
+  const updatedDate = r.updated_at ? new Date(r.updated_at) : new Date(r.created_at);
+  const dateStr = updatedDate.toISOString().split('T')[0].replace(/-/g, '.');
+  document.getElementById('detail-updated-at').innerText = `최종 수정: ${dateStr}`;
 
   document.getElementById('page-indicator').innerText = `${currentRecipeIndex + 1} / ${currentCategoryRecipes.length}`;
 
@@ -395,7 +572,6 @@ function renderRecipeDetail() {
   document.getElementById('btn-next-page').disabled = (currentRecipeIndex === currentCategoryRecipes.length - 1);
 }
 
-// 책장 넘기기
 document.getElementById('btn-prev-page').addEventListener('click', () => {
   if (currentRecipeIndex > 0) {
     currentRecipeIndex--;
@@ -414,7 +590,39 @@ document.getElementById('btn-back-to-toc').addEventListener('click', () => {
   showTocPage();
 });
 
-// 커스텀 삭제 팝업 모달 제어
+document.querySelectorAll('.star-opt').forEach(star => {
+  star.addEventListener('click', (e) => {
+    selectedDifficulty = parseInt(e.target.getAttribute('data-score'));
+    updateStarRatingUI();
+  });
+});
+
+function updateStarRatingUI() {
+  document.querySelectorAll('.star-opt').forEach(star => {
+    const score = parseInt(star.getAttribute('data-score'));
+    if (score <= selectedDifficulty) star.classList.add('active');
+    else star.classList.remove('active');
+  });
+}
+
+document.getElementById('btn-edit-recipe').addEventListener('click', () => {
+  const r = currentCategoryRecipes[currentRecipeIndex];
+  if (!r) return;
+
+  editingRecipeId = r.id;
+  selectedDifficulty = r.difficulty || 1;
+  updateStarRatingUI();
+
+  document.getElementById('recipe-modal-title').innerText = '✏️ 레시피 수정';
+  document.getElementById('recipe-title-input').value = r.title || '';
+  document.getElementById('recipe-category-input').value = r.category || '국&찌개';
+  document.getElementById('recipe-ingredients-input').value = r.ingredients || '';
+  document.getElementById('recipe-sauce-input').value = r.sauce || '';
+  document.getElementById('recipe-instructions-input').value = r.instructions || '';
+
+  document.getElementById('recipe-add-modal').classList.remove('hidden');
+});
+
 const deleteModal = document.getElementById('recipe-delete-modal');
 const deleteMsg = document.getElementById('delete-modal-msg');
 
@@ -439,10 +647,19 @@ document.getElementById('btn-confirm-delete').addEventListener('click', async ()
   await loadRecipes();
 });
 
-// 레시피 등록 모달
 document.getElementById('btn-open-recipe-modal').addEventListener('click', () => {
+  editingRecipeId = null;
+  selectedDifficulty = 1;
+  updateStarRatingUI();
+
+  document.getElementById('recipe-modal-title').innerText = '🍳 새 레시피 등록';
+  document.getElementById('recipe-title-input').value = '';
+  document.getElementById('recipe-ingredients-input').value = '';
+  document.getElementById('recipe-sauce-input').value = '';
+  document.getElementById('recipe-instructions-input').value = '';
   document.getElementById('recipe-add-modal').classList.remove('hidden');
 });
+
 document.getElementById('btn-close-recipe-modal').addEventListener('click', () => {
   document.getElementById('recipe-add-modal').classList.add('hidden');
 });
@@ -451,14 +668,36 @@ document.getElementById('btn-save-recipe').addEventListener('click', async () =>
   const title = document.getElementById('recipe-title-input').value.trim();
   const category = document.getElementById('recipe-category-input').value;
   const ingredients = document.getElementById('recipe-ingredients-input').value.trim();
+  const sauce = document.getElementById('recipe-sauce-input').value.trim();
   const instructions = document.getElementById('recipe-instructions-input').value.trim();
+  const nowStr = new Date().toISOString();
 
   if (!title) return alert('요리 이름을 입력해 주세요.');
 
-  await db.from('recipes').insert([{ title, category, ingredients, instructions }]);
-  document.getElementById('recipe-title-input').value = '';
-  document.getElementById('recipe-ingredients-input').value = '';
-  document.getElementById('recipe-instructions-input').value = '';
+  if (editingRecipeId) {
+    await db.from('recipes').update({ 
+      title, 
+      category, 
+      difficulty: selectedDifficulty,
+      ingredients, 
+      sauce, 
+      instructions,
+      updated_at: nowStr 
+    }).eq('id', editingRecipeId);
+  } else {
+    const nextOrder = currentCategoryRecipes.length;
+    await db.from('recipes').insert([{ 
+      title, 
+      category, 
+      difficulty: selectedDifficulty,
+      sort_order: nextOrder,
+      ingredients, 
+      sauce, 
+      instructions,
+      updated_at: nowStr 
+    }]);
+  }
+
   document.getElementById('recipe-add-modal').classList.add('hidden');
 
   currentRecipeCategory = category;
@@ -469,7 +708,104 @@ document.getElementById('btn-save-recipe').addEventListener('click', async () =>
   loadRecipes();
 });
 
-// === 🛒 장보기 (주간 이동 연동) ===
+// 인기 레시피 통계
+document.getElementById('btn-open-stats-modal').addEventListener('click', () => openPopularStatsModal());
+document.getElementById('btn-close-stats-modal').addEventListener('click', () => {
+  document.getElementById('recipe-stats-modal').classList.add('hidden');
+});
+
+function getPastelColor(index) {
+  const colors = [
+    '#e76f51', '#f4a261', '#e9c46a', '#2a9d8f', '#264653',
+    '#b5838d', '#e07a5f', '#81b29a', '#f2cc8f', '#6b705c'
+  ];
+  if (index < colors.length) return colors[index];
+  const hue = (index * 137.5) % 360;
+  return `hsl(${hue}, 65%, 65%)`;
+}
+
+async function openPopularStatsModal() {
+  const { data: meals } = await db.from('meals').select('menu_name, meal_type');
+  
+  const countMap = {};
+  let totalCount = 0;
+
+  (meals || []).forEach(m => {
+    const isHomeMeal = !m.meal_type || m.meal_type === 'home';
+    if (m.menu_name && isHomeMeal) {
+      countMap[m.menu_name] = (countMap[m.menu_name] || 0) + 1;
+      totalCount++;
+    }
+  });
+
+  const sortedMenus = Object.keys(countMap)
+    .map(menu => ({ menu, count: countMap[menu] }))
+    .sort((a, b) => b.count - a.count);
+
+  renderPopularChart(sortedMenus, totalCount);
+
+  const statsList = document.getElementById('stats-list');
+  statsList.innerHTML = '';
+
+  if (sortedMenus.length === 0) {
+    statsList.innerHTML = `<div class="recipe-note-empty">아직 집밥 기록이 없어요!</div>`;
+  } else {
+    sortedMenus.forEach((item, idx) => {
+      const color = getPastelColor(idx);
+      const percent = totalCount > 0 ? ((item.count / totalCount) * 100).toFixed(1) : 0;
+
+      const div = document.createElement('div');
+      div.className = 'stats-item';
+      div.innerHTML = `
+        <div class="stats-item-left">
+          <span class="color-dot" style="background-color: ${color};"></span>
+          <span>${idx + 1}. ${item.menu}</span>
+        </div>
+        <div><b>${item.count}회</b> (${percent}%)</div>
+      `;
+      statsList.appendChild(div);
+    });
+  }
+
+  document.getElementById('recipe-stats-modal').classList.remove('hidden');
+}
+
+function renderPopularChart(sortedMenus, totalCount) {
+  const canvas = document.getElementById('popularChart');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (totalCount === 0 || sortedMenus.length === 0) {
+    ctx.fillStyle = '#d0c8be';
+    ctx.beginPath();
+    ctx.arc(110, 110, 80, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+
+  let startAngle = -Math.PI / 2;
+
+  sortedMenus.forEach((item, idx) => {
+    const sliceAngle = (item.count / totalCount) * (Math.PI * 2);
+    const color = getPastelColor(idx);
+
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(110, 110);
+    ctx.arc(110, 110, 85, startAngle, startAngle + sliceAngle);
+    ctx.closePath();
+    ctx.fill();
+
+    startAngle += sliceAngle;
+  });
+
+  ctx.fillStyle = '#fffdfa';
+  ctx.beginPath();
+  ctx.arc(110, 110, 45, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// === 🛒 장보기 ===
 document.getElementById('prev-shop-week').addEventListener('click', () => {
   currentDate.setDate(currentDate.getDate() - 7);
   loadShoppingList();
@@ -541,5 +877,4 @@ async function deleteShoppingItem(id) {
   loadShoppingList();
 }
 
-// 초기 실행
 switchMainTab('menu');
