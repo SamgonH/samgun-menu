@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>샘건 저녁메뉴</title>
+  <!-- 손글씨 폰트 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+  <!-- Supabase JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- 상단 헤더 -->
+    <header class="header">
+      <h1 class="logo">🍲 샘건 저녁메뉴</h1>
+      <div id="sub-toggle" class="sub-toggle">
+        <button id="btn-weekly" class="toggle-btn active">주간</button>
+        <button id="btn-monthly" class="toggle-btn">월간</button>
+      </div>
+    </header>
+
+    <!-- 메인 컨텐츠 영역 -->
+    <main class="content-area">
+      <!-- 1. 주간 뷰 -->
+      <section id="weekly-view" class="view-section">
+        <div class="date-nav">
+          <button id="prev-week" class="nav-arrow">&lt;</button>
+          <div id="weekly-picker-trigger" class="date-picker-wrapper">
+            <div id="current-week-label" class="date-label-box">
+              <div id="week-title" class="week-title underline-text"></div>
+              <div id="week-range" class="week-range"></div>
+            </div>
+          </div>
+          <button id="next-week" class="nav-arrow">&gt;</button>
+        </div>
+        <div id="weekly-list" class="weekly-list">
+          <div class="loading-box">🍲 주간 메뉴를 불러오는 중...</div>
+        </div>
+      </section>
+
+      <!-- 2. 월간 뷰 -->
+      <section id="monthly-view" class="view-section hidden">
+        <div class="date-nav">
+          <button id="prev-month" class="nav-arrow">&lt;</button>
+          <div id="monthly-picker-trigger" class="date-picker-wrapper">
+            <span id="current-month-label" class="month-title underline-text"></span>
+          </div>
+          <button id="next-month" class="nav-arrow">&gt;</button>
+        </div>
+        <div class="calendar-grid-header">
+          <div class="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="sat">토</div>
+        </div>
+        <div id="monthly-grid" class="monthly-grid">
+          <div class="loading-box">🍲 달력을 불러오는 중...</div>
+        </div>
+      </section>
+
+      <!-- 3. 레시피 북 뷰 -->
+      <section id="recipe-view" class="view-section handwriting hidden">
+        <div class="recipe-top-bar">
+          <h3 class="recipe-app-title">📖 나만의 레시피 노트</h3>
+          <button id="btn-open-recipe-modal" class="note-add-btn">✏️ 레시피 쓰기</button>
+        </div>
+
+        <!-- 이모티콘 탭 -->
+        <div class="bookmark-tabs">
+          <button class="bookmark-tab active" data-cat="국&찌개">🍲</button>
+          <button class="bookmark-tab" data-cat="볶음&조림">🍳</button>
+          <button class="bookmark-tab" data-cat="밥류">🍚</button>
+          <button class="bookmark-tab" data-cat="면류">🍜</button>
+          <button class="bookmark-tab" data-cat="기타">🍴</button>
+        </div>
+
+        <!-- 노트 종이 영역 -->
+        <div class="notebook-container">
+          <!-- 3-1. 목차 페이지 -->
+          <div id="recipe-toc-page" class="recipe-page">
+            <div class="toc-header">
+              <span class="toc-title">📋 <span id="toc-cat-name">국&찌개</span> 목차</span>
+            </div>
+            <div id="toc-list" class="toc-list"></div>
+          </div>
+
+          <!-- 3-2. 상세 페이지 -->
+          <div id="recipe-detail-page" class="recipe-page hidden">
+            <div class="detail-top-nav">
+              <button id="btn-back-to-toc" class="back-toc-btn">≡ 목차</button>
+              <button id="btn-open-delete-modal" class="delete-recipe-btn">🗑️ 삭제</button>
+            </div>
+            
+            <div class="page-paper">
+              <div id="detail-title" class="recipe-note-title"></div>
+              <div id="detail-body" class="recipe-note-body"></div>
+            </div>
+
+            <div class="page-flip-nav">
+              <button id="btn-prev-page" class="flip-btn">◀ 이전</button>
+              <span id="page-indicator" class="page-num">1 / 1</span>
+              <button id="btn-next-page" class="flip-btn">다음 ▶</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. 장보기 뷰 -->
+      <section id="shopping-view" class="view-section hidden">
+        <div class="date-nav">
+          <button id="prev-shop-week" class="nav-arrow">&lt;</button>
+          <div id="shop-picker-trigger" class="date-picker-wrapper">
+            <div class="date-label-box">
+              <div id="shop-week-title" class="week-title underline-text"></div>
+              <div id="shop-week-range" class="week-range"></div>
+            </div>
+          </div>
+          <button id="next-shop-week" class="nav-arrow">&gt;</button>
+        </div>
+
+        <div class="shopping-header">
+          <div class="shopping-input-box">
+            <input type="text" id="shopping-input" placeholder="사야 할 재료 (예: 대파, 계란)">
+            <button id="btn-add-shopping" class="pretty-btn small">+ 추가</button>
+          </div>
+        </div>
+        <div id="shopping-list" class="shopping-list">
+          <div class="loading-box">🛒 장보기 목록을 불러오는 중...</div>
+        </div>
+      </section>
+    </main>
+
+    <!-- 하단 고정 바 -->
+    <nav class="bottom-nav">
+      <button id="tab-menu" class="nav-item active">
+        <span class="icon">🍱</span>
+        <span class="label">메뉴판</span>
+      </button>
+      <button id="tab-recipe" class="nav-item">
+        <span class="icon">📖</span>
+        <span class="label">레시피</span>
+      </button>
+      <button id="tab-shopping" class="nav-item">
+        <span class="icon">🛒</span>
+        <span class="label">장보기</span>
+      </button>
+    </nav>
+
+    <!-- 모달 1: 달력 모달 -->
+    <div id="custom-calendar-modal" class="modal hidden">
+      <div class="modal-content calendar-modal-content">
+        <div class="custom-cal-header">
+          <span id="cal-month-title" class="cal-title-text"></span>
+          <div class="cal-nav-btns">
+            <button id="cal-prev-btn" class="cal-arrow">&lt;</button>
+            <button id="cal-next-btn" class="cal-arrow">&gt;</button>
+          </div>
+        </div>
+        <div class="cal-grid-header">
+          <div class="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="sat">토</div>
+        </div>
+        <div id="custom-cal-grid" class="custom-cal-grid"></div>
+        <div class="modal-actions">
+          <button id="btn-close-cal-modal" class="cancel-btn">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🌟 모달 2: 식사 등록 모달 (손글씨 클래스 및 감성 디자인 적용) -->
+    <div id="meal-modal" class="modal hidden">
+      <div class="modal-content recipe-modal-handwriting">
+        <h3 id="modal-date-title">메뉴 등록</h3>
+        <input type="text" id="meal-input" placeholder="오늘 뭐 먹을까? (예: 삼겹살)">
+        <div class="recipe-select-box" style="display:flex; flex-direction:column; gap:4px;">
+          <label>또는 레시피에서 선택</label>
+          <select id="recipe-dropdown">
+            <option value="">-- 레시피 선택 --</option>
+          </select>
+        </div>
+        <div class="modal-actions">
+          <button id="btn-save-meal" class="primary-btn">저장</button>
+          <button id="btn-close-modal" class="cancel-btn">취소</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 모달 3: 새 레시피 등록 모달 -->
+    <div id="recipe-add-modal" class="modal hidden">
+      <div class="modal-content large-modal recipe-modal-handwriting">
+        <h3>🍳 새 레시피 등록</h3>
+        <div class="form-group">
+          <label>요리 이름</label>
+          <input type="text" id="recipe-title-input" placeholder="예: 된장찌개">
+        </div>
+        <div class="form-group">
+          <label>카테고리</label>
+          <select id="recipe-category-input">
+            <option value="국&찌개">🍲 국 & 찌개</option>
+            <option value="볶음&조림">🍳 볶음 & 조림</option>
+            <option value="밥류">🍚 밥류</option>
+            <option value="면류">🍜 면류</option>
+            <option value="기타" selected>🍴 기타</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>재료</label>
+          <textarea id="recipe-ingredients-input" rows="3" placeholder="필요한 재료를 적어주세요."></textarea>
+        </div>
+        <div class="form-group">
+          <label>조리법 / 메모</label>
+          <textarea id="recipe-instructions-input" rows="4" placeholder="조리 순서나 팁을 적어보세요!"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button id="btn-save-recipe" class="primary-btn">등록하기</button>
+          <button id="btn-close-recipe-modal" class="cancel-btn">취소</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 모달 4: 삭제 확인 커스텀 모달 -->
+    <div id="recipe-delete-modal" class="modal hidden">
+      <div class="modal-content recipe-modal-handwriting">
+        <h3>🗑️ 레시피 삭제</h3>
+        <p id="delete-modal-msg" style="text-align: center; margin: 10px 0; color: #3d405b;"></p>
+        <div class="modal-actions">
+          <button id="btn-confirm-delete" class="primary-btn" style="background-color: #e76f51;">삭제</button>
+          <button id="btn-cancel-delete" class="cancel-btn">취소</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
