@@ -4,13 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>샘건 저녁메뉴</title>
-  <!-- 손글씨 폰트 -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="style.css">
-  <!-- Supabase JS SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -64,10 +62,12 @@
       <section id="recipe-view" class="view-section handwriting hidden">
         <div class="recipe-top-bar">
           <h3 class="recipe-app-title">📖 나만의 레시피 노트</h3>
-          <button id="btn-open-recipe-modal" class="note-add-btn">✏️ 레시피 쓰기</button>
+          <div class="recipe-top-btns">
+            <button id="btn-open-stats-modal" class="popular-btn">🔥 인기 레시피</button>
+            <button id="btn-open-recipe-modal" class="note-add-btn">✏️ 레시피 쓰기</button>
+          </div>
         </div>
 
-        <!-- 이모티콘 탭 -->
         <div class="bookmark-tabs">
           <button class="bookmark-tab active" data-cat="국&찌개">🍲</button>
           <button class="bookmark-tab" data-cat="볶음&조림">🍳</button>
@@ -76,12 +76,11 @@
           <button class="bookmark-tab" data-cat="기타">🍴</button>
         </div>
 
-        <!-- 노트 종이 영역 -->
         <div class="notebook-container">
           <!-- 3-1. 목차 페이지 -->
           <div id="recipe-toc-page" class="recipe-page">
             <div class="toc-header">
-              <span class="toc-title">📋 <span id="toc-cat-name">국&찌개</span> 목차</span>
+              <span class="toc-title"><span id="toc-icon">🍲</span> <span id="toc-cat-name">국&찌개</span> 목차</span>
             </div>
             <div id="toc-list" class="toc-list"></div>
           </div>
@@ -90,12 +89,16 @@
           <div id="recipe-detail-page" class="recipe-page hidden">
             <div class="detail-top-nav">
               <button id="btn-back-to-toc" class="back-toc-btn">≡ 목차</button>
-              <button id="btn-open-delete-modal" class="delete-recipe-btn">🗑️ 삭제</button>
+              <div class="detail-btn-group">
+                <button id="btn-edit-recipe" class="edit-recipe-btn">✏️ 수정</button>
+                <button id="btn-open-delete-modal" class="delete-recipe-btn">🗑️ 삭제</button>
+              </div>
             </div>
             
             <div class="page-paper">
               <div id="detail-title" class="recipe-note-title"></div>
               <div id="detail-body" class="recipe-note-body"></div>
+              <div id="detail-updated-at" class="recipe-updated-at"></div>
             </div>
 
             <div class="page-flip-nav">
@@ -132,7 +135,7 @@
       </section>
     </main>
 
-    <!-- 하단 고정 바 -->
+    <!-- 하단 바 -->
     <nav class="bottom-nav">
       <button id="tab-menu" class="nav-item active">
         <span class="icon">🍱</span>
@@ -168,28 +171,75 @@
       </div>
     </div>
 
-    <!-- 🌟 모달 2: 식사 등록 모달 (손글씨 클래스 및 감성 디자인 적용) -->
+    <!-- 모달 2: 식사 등록 모달 -->
     <div id="meal-modal" class="modal hidden">
-      <div class="modal-content recipe-modal-handwriting">
+      <div class="modal-content">
         <h3 id="modal-date-title">메뉴 등록</h3>
-        <input type="text" id="meal-input" placeholder="오늘 뭐 먹을까? (예: 삼겹살)">
-        <div class="recipe-select-box" style="display:flex; flex-direction:column; gap:4px;">
-          <label>또는 레시피에서 선택</label>
-          <select id="recipe-dropdown">
-            <option value="">-- 레시피 선택 --</option>
-          </select>
+        
+        <div class="meal-type-group">
+          <button type="button" class="meal-type-btn active" data-type="home">🏠 집밥</button>
+          <button type="button" class="meal-type-btn" data-type="delivery">🛵 배달</button>
+          <button type="button" class="meal-type-btn" data-type="out">🍽️ 외식</button>
         </div>
+
+        <div id="icon-select-group" class="icon-select-group">
+          <label>이모티콘 선택</label>
+          <div class="icon-picker-btns">
+            <button type="button" class="icon-opt active" data-icon="🍲">🍲</button>
+            <button type="button" class="icon-opt" data-icon="🍳">🍳</button>
+            <button type="button" class="icon-opt" data-icon="🍚">🍚</button>
+            <button type="button" class="icon-opt" data-icon="🍜">🍜</button>
+            <button type="button" class="icon-opt" data-icon="🍴">🍴</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <input type="text" id="meal-input" placeholder="오늘 뭐 먹을까? (예: 삼겹살)">
+        </div>
+
+        <div id="recipe-select-box" class="recipe-select-box">
+          <button type="button" id="btn-open-recipe-picker" class="recipe-picker-trigger-btn">
+            📖 레시피에서 가져오기
+          </button>
+        </div>
+
         <div class="modal-actions">
           <button id="btn-save-meal" class="primary-btn">저장</button>
+          <button id="btn-delete-meal" class="delete-btn hidden" style="background-color:#e76f51; color:#fff; flex:1; border:none; border-radius:14px; font-size:1rem; cursor:pointer;">삭제</button>
           <button id="btn-close-modal" class="cancel-btn">취소</button>
         </div>
       </div>
     </div>
 
-    <!-- 모달 3: 새 레시피 등록 모달 -->
+    <!-- 🌟 모달 2-1: 레시피 카테고리 선택 팝업 (5등분 이모티콘 탭 적용) -->
+    <div id="recipe-picker-modal" class="modal hidden">
+      <div class="modal-content">
+        <h3>📖 레시피 선택</h3>
+        
+        <!-- 5등분 이모티콘 탭 -->
+        <div class="picker-cat-tabs">
+          <button type="button" class="picker-cat-btn active" data-cat="국&찌개">🍲</button>
+          <button type="button" class="picker-cat-btn" data-cat="볶음&조림">🍳</button>
+          <button type="button" class="picker-cat-btn" data-cat="밥류">🍚</button>
+          <button type="button" class="picker-cat-btn" data-cat="면류">🍜</button>
+          <button type="button" class="picker-cat-btn" data-cat="기타">🍴</button>
+        </div>
+
+        <div id="picker-cat-title" class="picker-cat-title">[국&찌개] 목록</div>
+
+        <!-- 해당 카테고리 내 레시피 목록 -->
+        <div id="picker-recipe-list" class="picker-recipe-list"></div>
+
+        <div class="modal-actions">
+          <button id="btn-close-recipe-picker" class="cancel-btn">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 모달 3: 레시피 등록/수정 모달 -->
     <div id="recipe-add-modal" class="modal hidden">
       <div class="modal-content large-modal recipe-modal-handwriting">
-        <h3>🍳 새 레시피 등록</h3>
+        <h3 id="recipe-modal-title">🍳 새 레시피 등록</h3>
         <div class="form-group">
           <label>요리 이름</label>
           <input type="text" id="recipe-title-input" placeholder="예: 된장찌개">
@@ -205,21 +255,35 @@
           </select>
         </div>
         <div class="form-group">
+          <label>요리 난이도</label>
+          <div id="star-rating-picker" class="star-rating-picker">
+            <span class="star-opt active" data-score="1">★</span>
+            <span class="star-opt" data-score="2">★</span>
+            <span class="star-opt" data-score="3">★</span>
+            <span class="star-opt" data-score="4">★</span>
+            <span class="star-opt" data-score="5">★</span>
+          </div>
+        </div>
+        <div class="form-group">
           <label>재료</label>
-          <textarea id="recipe-ingredients-input" rows="3" placeholder="필요한 재료를 적어주세요."></textarea>
+          <textarea id="recipe-ingredients-input" rows="2" placeholder="주재료를 적어주세요. (예: 두부, 애호박, 고기)"></textarea>
+        </div>
+        <div class="form-group">
+          <label>양념장</label>
+          <textarea id="recipe-sauce-input" rows="2" placeholder="양념 재료를 적어주세요. (예: 된장 2, 고추장 0.5, 다진마늘)"></textarea>
         </div>
         <div class="form-group">
           <label>조리법 / 메모</label>
-          <textarea id="recipe-instructions-input" rows="4" placeholder="조리 순서나 팁을 적어보세요!"></textarea>
+          <textarea id="recipe-instructions-input" rows="3" placeholder="조리 순서나 팁을 적어보세요!"></textarea>
         </div>
         <div class="modal-actions">
-          <button id="btn-save-recipe" class="primary-btn">등록하기</button>
+          <button id="btn-save-recipe" class="primary-btn">저장하기</button>
           <button id="btn-close-recipe-modal" class="cancel-btn">취소</button>
         </div>
       </div>
     </div>
 
-    <!-- 모달 4: 삭제 확인 커스텀 모달 -->
+    <!-- 모달 4: 삭제 확인 모달 -->
     <div id="recipe-delete-modal" class="modal hidden">
       <div class="modal-content recipe-modal-handwriting">
         <h3>🗑️ 레시피 삭제</h3>
@@ -227,6 +291,23 @@
         <div class="modal-actions">
           <button id="btn-confirm-delete" class="primary-btn" style="background-color: #e76f51;">삭제</button>
           <button id="btn-cancel-delete" class="cancel-btn">취소</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 모달 5: 인기 레시피 원형 그래프 모달 -->
+    <div id="recipe-stats-modal" class="modal hidden">
+      <div class="modal-content large-modal recipe-modal-handwriting">
+        <h3>🔥 역대 가장 많이 먹은 집밥 메뉴</h3>
+        
+        <div class="chart-container">
+          <canvas id="popularChart" width="220" height="220"></canvas>
+        </div>
+
+        <div id="stats-list" class="stats-list-box"></div>
+
+        <div class="modal-actions">
+          <button id="btn-close-stats-modal" class="cancel-btn">닫기</button>
         </div>
       </div>
     </div>
