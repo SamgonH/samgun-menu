@@ -70,23 +70,28 @@ html, body {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* 🌟 헤더 높이 및 제목 고정 (탭 전환 시 크기 변동 차단) */
+/* 🌟 헤더 높이 완벽 고정 (탭 전환 시 들썩거림 100% 차단) */
 .header {
-  padding: 10px 20px;
-  min-height: 58px; /* 헤더 높이 정고정 */
+  height: 58px !important;
+  min-height: 58px !important;
+  max-height: 58px !important;
+  padding: 0 20px;
   background: var(--bg-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .logo { 
   font-size: 1.25rem !important; 
   font-weight: bold; 
   color: var(--accent-color); 
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  height: 100%;
 }
 
 .sub-toggle { 
@@ -616,7 +621,6 @@ html, body {
 .nav-item .label { font-size: 0.85rem; }
 .nav-item.active { color: var(--accent-color); }
 
-/* 모달 */
 .modal { 
   position: fixed; 
   top: 0; 
