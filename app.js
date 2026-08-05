@@ -1,3 +1,8 @@
+// 1. Supabase 연동 설정
+const SUPABASE_URL = "https://nflgvgekvlihbciwiluz.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mbGd2Z2VrdmxpaGJjaXdpbHV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3OTI3NDksImV4cCI6MjEwMTM2ODc0OX0.Dv51jnRlvJeh7ZHlikdBaidaGeU6wRIxwMTBNrUU79g";
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 const categoryIcons = {
   '국&찌개': '🍲',
   '볶음&조림': '🍳',
