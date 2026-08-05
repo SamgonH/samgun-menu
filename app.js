@@ -1,8 +1,3 @@
-// 1. Supabase 연동 설정
-const SUPABASE_URL = "https://nflgvgekvlihbciwiluz.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5mbGd2Z2VrdmxpaGJjaXdpbHV6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3OTI3NDksImV4cCI6MjEwMTM2ODc0OX0.Dv51jnRlvJeh7ZHlikdBaidaGeU6wRIxwMTBNrUU79g";
-const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
 const categoryIcons = {
   '국&찌개': '🍲',
   '볶음&조림': '🍳',
@@ -406,7 +401,7 @@ document.getElementById('btn-save-meal').addEventListener('click', async () => {
   else renderMonthlyView();
 });
 
-// 월간 캘린더 (🌟 미니 메뉴 이름 이모티콘 아래 안 잘리고 노출)
+// 월간 캘린더
 document.getElementById('prev-month').addEventListener('click', () => {
   currentDate.setMonth(currentDate.getMonth() - 1);
   renderMonthlyView();
@@ -547,7 +542,6 @@ function openRecipeDetail(index) {
   renderRecipeDetail();
 }
 
-// 🌟 상세 레시피 줄밀림 완벽 차단 및 라인피팅
 function renderRecipeDetail() {
   const r = currentCategoryRecipes[currentRecipeIndex];
   if (!r) return showTocPage();
@@ -881,5 +875,14 @@ async function deleteShoppingItem(id) {
   await db.from('shopping_items').delete().eq('id', id);
   loadShoppingList();
 }
+
+// 🌟 모바일 키보드 닫힐 때 '팅' 제자리 복원 이벤트
+document.querySelectorAll('input, textarea, select').forEach(element => {
+  element.addEventListener('blur', () => {
+    setTimeout(() => {
+      window.scrollTo(0, 0);
+    }, 100);
+  });
+});
 
 switchMainTab('menu');
