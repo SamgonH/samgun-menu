@@ -326,7 +326,7 @@ function updateMealTypeUI() {
   }
 }
 
-// 🌟 레시피 선택 서브 팝업 5등분 이모티콘 탭
+// 레시피 선택 서브 팝업
 document.getElementById('btn-open-recipe-picker').addEventListener('click', () => {
   pickerSelectedCat = '국&찌개';
   updateRecipePickerUI();
@@ -406,7 +406,7 @@ document.getElementById('btn-save-meal').addEventListener('click', async () => {
   else renderMonthlyView();
 });
 
-// 월간 캘린더
+// 월간 캘린더 (🌟 미니 메뉴 이름 이모티콘 아래 안 잘리고 노출)
 document.getElementById('prev-month').addEventListener('click', () => {
   currentDate.setMonth(currentDate.getMonth() - 1);
   renderMonthlyView();
@@ -452,7 +452,12 @@ async function renderMonthlyView() {
 
     cell.innerHTML = `
       <div class="month-day-number">${d}</div>
-      ${meal ? `<div class="month-menu-icon">${meal.icon || '🍲'}</div>` : ''}
+      ${meal ? `
+        <div class="month-menu-box">
+          <div class="month-menu-icon">${meal.icon || '🍲'}</div>
+          <div class="month-menu-text">${meal.menu_name}</div>
+        </div>
+      ` : ''}
     `;
     grid.appendChild(cell);
   }
@@ -542,7 +547,7 @@ function openRecipeDetail(index) {
   renderRecipeDetail();
 }
 
-// 🌟 상세 레시피 줄밀림 완전 차단 (각 섹션 36px 라인피팅)
+// 🌟 상세 레시피 줄밀림 완벽 차단 및 라인피팅
 function renderRecipeDetail() {
   const r = currentCategoryRecipes[currentRecipeIndex];
   if (!r) return showTocPage();
