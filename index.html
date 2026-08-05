@@ -2,7 +2,8 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- 🌟 모바일 핀치 확대 및 화면 흔들림 완전 방지 뷰포트 설정 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>샘건 저녁메뉴</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -211,12 +212,11 @@
       </div>
     </div>
 
-    <!-- 🌟 모달 2-1: 레시피 카테고리 선택 팝업 (5등분 이모티콘 탭 적용) -->
+    <!-- 모달 2-1: 레시피 카테고리 선택 팝업 -->
     <div id="recipe-picker-modal" class="modal hidden">
       <div class="modal-content">
         <h3>📖 레시피 선택</h3>
         
-        <!-- 5등분 이모티콘 탭 -->
         <div class="picker-cat-tabs">
           <button type="button" class="picker-cat-btn active" data-cat="국&찌개">🍲</button>
           <button type="button" class="picker-cat-btn" data-cat="볶음&조림">🍳</button>
@@ -227,7 +227,6 @@
 
         <div id="picker-cat-title" class="picker-cat-title">[국&찌개] 목록</div>
 
-        <!-- 해당 카테고리 내 레시피 목록 -->
         <div id="picker-recipe-list" class="picker-recipe-list"></div>
 
         <div class="modal-actions">
