@@ -2,7 +2,6 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <!-- 🌟 모바일 핀치 확대 및 화면 흔들림 완전 방지 뷰포트 설정 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>샘건 저녁메뉴</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -172,7 +171,7 @@
       </div>
     </div>
 
-    <!-- 모달 2: 식사 등록 모달 -->
+    <!-- 🌟 모달 2: 식사 등록 모달 ('따로먹음' 탭 & '사유' 입력창 추가) -->
     <div id="meal-modal" class="modal hidden">
       <div class="modal-content">
         <h3 id="modal-date-title">메뉴 등록</h3>
@@ -181,6 +180,7 @@
           <button type="button" class="meal-type-btn active" data-type="home">🏠 집밥</button>
           <button type="button" class="meal-type-btn" data-type="delivery">🛵 배달</button>
           <button type="button" class="meal-type-btn" data-type="out">🍽️ 외식</button>
+          <button type="button" class="meal-type-btn" data-type="alone">😭 따로먹음</button>
         </div>
 
         <div id="icon-select-group" class="icon-select-group">
@@ -194,8 +194,14 @@
           </div>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" id="meal-input-group">
           <input type="text" id="meal-input" placeholder="오늘 뭐 먹을까? (예: 삼겹살)">
+        </div>
+
+        <!-- 🌟 따로먹음 전용 사유 입력 칸 -->
+        <div class="form-group hidden" id="reason-input-group">
+          <label>사유 입력</label>
+          <input type="text" id="meal-reason-input" placeholder="사유를 적어주세요 (예: 회식, 야근, 약속)">
         </div>
 
         <div id="recipe-select-box" class="recipe-select-box">
