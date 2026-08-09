@@ -11,6 +11,19 @@ const categoryIcons = {
   '기타': '🍴'
 };
 
+// 🌟 타임존 영향 없는 100% 순수 YYYY-MM-DD 문자열 생성 함수
+function formatDateStr(y, m, d) {
+  const mm = String(m).padStart(2, '0');
+  const dd = String(d).padStart(2, '0');
+  return `${y}-${mm}-${dd}`;
+}
+
+// 오늘 날짜 문자열 (로컬 기준)
+function getTodayStr() {
+  const now = new Date();
+  return formatDateStr(now.getFullYear(), now.getMonth() + 1, now.getDate());
+}
+
 // 상태 변수
 let currentDate = new Date();
 let selectedDateStr = null;
@@ -45,7 +58,7 @@ const btnWeekly = document.getElementById('btn-weekly');
 const btnMonthly = document.getElementById('btn-monthly');
 
 function getWeekInfo(d) {
-  const date = new Date(d);
+  const date = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
   const firstDayOfMonth = new Date(year, date.getMonth(), 1);
@@ -54,11 +67,14 @@ function getWeekInfo(d) {
   return { year, month, weekNum };
 }
 
+// 월요일 기준 날짜 계산 (타임존 방지 정수 계산)
 function getMonday(d) {
-  const date = new Date(d);
-  const day = date.getDay();
-  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-  return new Date(date.setDate(diff));
+  const y = d.getFullYear();
+  const m = d.getMonth();
+  const dateNum = d.getDate();
+  const day = d.getDay();
+  const diff = dateNum - (day === 0 ? 6 : day - 1);
+  return new Date(y, m, diff);
 }
 
 tabMenu.addEventListener('click', () => switchMainTab('menu'));
@@ -128,7 +144,7 @@ document.getElementById('cal-next-btn').addEventListener('click', () => {
 });
 
 function openCustomCalModal() {
-  calModalDate = new Date(currentDate);
+  calModalDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
   renderCustomCalGrid();
   document.getElementById('custom-calendar-modal').classList.remove('hidden');
 }
@@ -148,40 +164,41 @@ function renderCustomCalGrid() {
   const selMonday = getMonday(currentDate);
   const selWeekDates = [];
   for (let i = 0; i < 7; i++) {
-    const d = new Date(selMonday);
-    d.setDate(selMonday.getDate() + i);
-    selWeekDates.push(d.toISOString().split('T')[0]);
+    const d = new Date(selMonday.getFullYear(), selMonday.getMonth(), selMonday.getDate() + i);
+    selWeekDates.push(formatDateStr(d.getFullYear(), d.getMonth() + 1, d.getDate()));
   }
 
   for (let x = firstDayIndex; x > 0; x--) {
     const dayNum = prevLastDate - x + 1;
     const d = new Date(year, month - 1, dayNum);
-    createCalCell(grid, dayNum, d.toISOString().split('T')[0], true, selWeekDates);
+    createCalCell(grid, dayNum, formatDateStr(d.getFullYear(), d.getMonth() + 1, d.getDate()), true, selWeekDates);
   }
 
   for (let i = 1; i <= lastDate; i++) {
     const d = new Date(year, month, i);
-    createCalCell(grid, i, d.toISOString().split('T')[0], false, selWeekDates);
+    createCalCell(grid, i, formatDateStr(year, month + 1, i), false, selWeekDates);
   }
 
   const totalCells = firstDayIndex + lastDate;
   const nextDays = (42 - totalCells) % 7;
   for (let j = 1; j <= nextDays; j++) {
     const d = new Date(year, month + 1, j);
-    createCalCell(grid, j, d.toISOString().split('T')[0], true, selWeekDates);
+    createCalCell(grid, j, formatDateStr(d.getFullYear(), d.getMonth() + 1, d.getDate()), true, selWeekDates);
   }
 }
 
 function createCalCell(container, dayNum, dateStr, isOtherMonth, selWeekDates) {
   const cell = document.createElement('div');
   const inWeek = selWeekDates.includes(dateStr);
-  const isTargetDay = dateStr === currentDate.toISOString().split('T')[0];
+  const targetTodayStr = formatDateStr(currentDate.getFullYear(), currentDate.getMonth() + 1, currentDate.getDate());
+  const isTargetDay = dateStr === targetTodayStr;
 
   cell.className = `cal-day-cell ${isOtherMonth ? 'other-month' : ''} ${inWeek && (menuMode === 'weekly' || currentTab === 'shopping') ? 'in-selected-week' : ''} ${isTargetDay ? 'selected-day' : ''}`;
   cell.innerText = dayNum;
 
   cell.onclick = () => {
-    currentDate = new Date(dateStr);
+    const parts = dateStr.split('-');
+    currentDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
     document.getElementById('custom-calendar-modal').classList.add('hidden');
     if (currentTab === 'shopping') loadShoppingList();
     else if (menuMode === 'weekly') renderWeeklyView();
@@ -191,7 +208,7 @@ function createCalCell(container, dayNum, dateStr, isOtherMonth, selWeekDates) {
   container.appendChild(cell);
 }
 
-// === 주간 캘린더 ===
+// === 🍱 주간 캘린더 (날짜 문자열 직접 매핑) ===
 document.getElementById('prev-week').addEventListener('click', () => {
   currentDate.setDate(currentDate.getDate() - 7);
   renderWeeklyView();
@@ -208,9 +225,8 @@ async function renderWeeklyView() {
   const monday = getMonday(currentDate);
   const weekDates = [];
   for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    weekDates.push(d.toISOString().split('T')[0]);
+    const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+    weekDates.push(formatDateStr(d.getFullYear(), d.getMonth() + 1, d.getDate()));
   }
 
   const info = getWeekInfo(monday);
@@ -226,25 +242,29 @@ async function renderWeeklyView() {
 
   weeklyList.innerHTML = '';
   const dayNames = ['월', '화', '수', '목', '금', '토', '일'];
+  const todayStr = getTodayStr();
 
+  // 월요일부터 일요일까지 1:1 정밀 매핑
   weekDates.forEach((dateStr, idx) => {
     const meal = mealsMap[dateStr];
-    const isToday = dateStr === new Date().toISOString().split('T')[0];
+    const isToday = dateStr === todayStr;
     const card = document.createElement('div');
     
     const mealTypeClass = meal?.meal_type ? `meal-${meal.meal_type}` : '';
     card.className = `day-card ${isToday ? 'today' : ''} ${mealTypeClass}`;
 
     let displayMenu = '메뉴를 등록해 보세요';
-    if (meal?.menu_name) {
+    if (meal?.meal_type === 'alone') {
+      displayMenu = `😭 따로먹음${meal.reason ? ` (${meal.reason})` : ''}`;
+    } else if (meal?.menu_name) {
       const icon = meal.icon || '🍲';
       displayMenu = `${icon} ${meal.menu_name}`;
     }
 
     card.innerHTML = `
-      <div class="day-info" onclick="openMealModal('${dateStr}', '${meal?.menu_name || ''}', '${meal?.icon || '🍲'}', '${meal?.meal_type || 'home'}')">
+      <div class="day-info" onclick="openMealModal('${dateStr}', '${meal?.menu_name || ''}', '${meal?.icon || '🍲'}', '${meal?.meal_type || 'home'}', '${meal?.reason || ''}')">
         <span class="day-name">${dateStr.slice(5)} (${dayNames[idx]})</span>
-        <span class="menu-text ${!meal?.menu_name ? 'empty' : ''}">
+        <span class="menu-text ${(!meal?.menu_name && meal?.meal_type !== 'alone') ? 'empty' : ''}">
           ${displayMenu}
         </span>
       </div>
@@ -254,10 +274,11 @@ async function renderWeeklyView() {
 }
 
 // 식사 입력 모달
-async function openMealModal(dateStr, currentMenu, currentIcon, currentType) {
+async function openMealModal(dateStr, currentMenu, currentIcon, currentType, currentReason) {
   selectedDateStr = dateStr;
   document.getElementById('modal-date-title').innerText = `${dateStr} 저녁메뉴`;
-  document.getElementById('meal-input').value = currentMenu;
+  document.getElementById('meal-input').value = currentMenu || '';
+  document.getElementById('meal-reason-input').value = currentReason || '';
 
   selectedMealType = currentType || 'home';
   selectedMealIcon = currentIcon || '🍲';
@@ -265,7 +286,7 @@ async function openMealModal(dateStr, currentMenu, currentIcon, currentType) {
   updateMealTypeUI();
 
   const deleteBtn = document.getElementById('btn-delete-meal');
-  if (currentMenu) {
+  if (currentMenu || currentType === 'alone') {
     deleteBtn.classList.remove('hidden');
   } else {
     deleteBtn.classList.add('hidden');
@@ -289,6 +310,7 @@ document.querySelectorAll('.meal-type-btn').forEach(btn => {
     selectedMealType = e.target.getAttribute('data-type');
     if (selectedMealType === 'delivery') selectedMealIcon = '🛵';
     else if (selectedMealType === 'out') selectedMealIcon = '🍽️';
+    else if (selectedMealType === 'alone') selectedMealIcon = '😭';
     else selectedMealIcon = '🍲';
 
     updateMealTypeUI();
@@ -311,18 +333,29 @@ function updateMealTypeUI() {
 
   const iconGroup = document.getElementById('icon-select-group');
   const recipeBox = document.getElementById('recipe-select-box');
+  const mealInputGroup = document.getElementById('meal-input-group');
+  const reasonInputGroup = document.getElementById('reason-input-group');
 
   if (selectedMealType === 'home') {
     iconGroup.classList.remove('hidden');
     recipeBox.classList.remove('hidden');
+    mealInputGroup.classList.remove('hidden');
+    reasonInputGroup.classList.add('hidden');
 
     document.querySelectorAll('.icon-opt').forEach(b => {
       if (b.getAttribute('data-icon') === selectedMealIcon) b.classList.add('active');
       else b.classList.remove('active');
     });
+  } else if (selectedMealType === 'alone') {
+    iconGroup.classList.add('hidden');
+    recipeBox.classList.add('hidden');
+    mealInputGroup.classList.add('hidden');
+    reasonInputGroup.classList.remove('hidden');
   } else {
     iconGroup.classList.add('hidden');
     recipeBox.classList.add('hidden');
+    mealInputGroup.classList.remove('hidden');
+    reasonInputGroup.classList.add('hidden');
   }
 }
 
@@ -391,12 +424,23 @@ document.getElementById('btn-close-modal').addEventListener('click', () => {
 
 document.getElementById('btn-save-meal').addEventListener('click', async () => {
   const menuName = document.getElementById('meal-input').value.trim();
-  if (menuName) {
+  const reason = document.getElementById('meal-reason-input').value.trim();
+
+  if (selectedMealType === 'alone') {
+    await db.from('meals').upsert({ 
+      date: selectedDateStr, 
+      menu_name: '따로먹음', 
+      icon: '😭',
+      meal_type: 'alone',
+      reason: reason
+    }, { onConflict: 'date' });
+  } else if (menuName) {
     await db.from('meals').upsert({ 
       date: selectedDateStr, 
       menu_name: menuName, 
       icon: selectedMealIcon,
-      meal_type: selectedMealType 
+      meal_type: selectedMealType,
+      reason: null
     }, { onConflict: 'date' });
   } else {
     await db.from('meals').delete().eq('date', selectedDateStr);
@@ -406,7 +450,7 @@ document.getElementById('btn-save-meal').addEventListener('click', async () => {
   else renderMonthlyView();
 });
 
-// 월간 캘린더
+// 🌟 월간 캘린더 (정확한 날짜 직접 매핑)
 document.getElementById('prev-month').addEventListener('click', () => {
   currentDate.setMonth(currentDate.getMonth() - 1);
   renderMonthlyView();
@@ -424,8 +468,8 @@ async function renderMonthlyView() {
   const firstDay = new Date(year, month, 1).getDay();
   const lastDate = new Date(year, month + 1, 0).getDate();
 
-  const startDateStr = `${year}-${String(month + 1).padStart(2, '0')}-01`;
-  const endDateStr = `${year}-${String(month + 1).padStart(2, '0')}-${lastDate}`;
+  const startDateStr = formatDateStr(year, month + 1, 1);
+  const endDateStr = formatDateStr(year, month + 1, lastDate);
 
   const { data: meals } = await db.from('meals').select('*').gte('date', startDateStr).lte('date', endDateStr);
   const mealsMap = {};
@@ -438,24 +482,27 @@ async function renderMonthlyView() {
     grid.innerHTML += `<div class="month-day-cell" style="background:transparent; box-shadow:none;"></div>`;
   }
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getTodayStr();
 
   for (let d = 1; d <= lastDate; d++) {
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const dateStr = formatDateStr(year, month + 1, d);
     const meal = mealsMap[dateStr];
     const isToday = dateStr === todayStr;
 
     const cell = document.createElement('div');
     const mealTypeClass = meal?.meal_type ? `meal-${meal.meal_type}` : '';
     cell.className = `month-day-cell ${isToday ? 'today' : ''} ${mealTypeClass}`;
-    cell.onclick = () => openMealModal(dateStr, meal?.menu_name || '', meal?.icon || '🍲', meal?.meal_type || 'home');
+    cell.onclick = () => openMealModal(dateStr, meal?.menu_name || '', meal?.icon || '🍲', meal?.meal_type || 'home', meal?.reason || '');
+
+    let textVal = meal?.menu_name || '';
+    if (meal?.meal_type === 'alone') textVal = meal.reason ? `따로(${meal.reason})` : '따로먹음';
 
     cell.innerHTML = `
       <div class="month-day-number">${d}</div>
       ${meal ? `
         <div class="month-menu-box">
           <div class="month-menu-icon">${meal.icon || '🍲'}</div>
-          <div class="month-menu-text">${meal.menu_name}</div>
+          <div class="month-menu-text">${textVal}</div>
         </div>
       ` : ''}
     `;
@@ -567,7 +614,7 @@ function renderRecipeDetail() {
   document.getElementById('detail-body').innerHTML = bodyHtml;
 
   const updatedDate = r.updated_at ? new Date(r.updated_at) : new Date(r.created_at);
-  const dateStr = updatedDate.toISOString().split('T')[0].replace(/-/g, '.');
+  const dateStr = formatDateStr(updatedDate.getFullYear(), updatedDate.getMonth() + 1, updatedDate.getDate()).replace(/-/g, '.');
   document.getElementById('detail-updated-at').innerText = `최종 수정: ${dateStr}`;
 
   document.getElementById('page-indicator').innerText = `${currentRecipeIndex + 1} / ${currentCategoryRecipes.length}`;
@@ -821,10 +868,11 @@ document.getElementById('next-shop-week').addEventListener('click', () => {
 
 async function loadShoppingList() {
   const monday = getMonday(currentDate);
-  const mondayStr = monday.toISOString().split('T')[0];
+  const mondayStr = formatDateStr(monday.getFullYear(), monday.getMonth() + 1, monday.getDate());
   const info = getWeekInfo(monday);
 
-  const sundayStr = new Date(monday.getTime() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const sunday = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6);
+  const sundayStr = formatDateStr(sunday.getFullYear(), sunday.getMonth() + 1, sunday.getDate());
   const startStr = mondayStr.slice(5).replace('-', '.');
   const endStr = sundayStr.slice(5).replace('-', '.');
 
@@ -865,7 +913,8 @@ document.getElementById('btn-add-shopping').addEventListener('click', async () =
   const itemName = input.value.trim();
   if (!itemName) return;
 
-  const mondayStr = getMonday(currentDate).toISOString().split('T')[0];
+  const monday = getMonday(currentDate);
+  const mondayStr = formatDateStr(monday.getFullYear(), monday.getMonth() + 1, monday.getDate());
   await db.from('shopping_items').insert([{ week_start_date: mondayStr, item_name: itemName }]);
   input.value = '';
   loadShoppingList();
@@ -881,7 +930,6 @@ async function deleteShoppingItem(id) {
   loadShoppingList();
 }
 
-// 🌟 모바일 키보드 닫힐 때 '팅' 제자리 복원 이벤트
 document.querySelectorAll('input, textarea, select').forEach(element => {
   element.addEventListener('blur', () => {
     setTimeout(() => {
