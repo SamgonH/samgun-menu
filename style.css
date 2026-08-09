@@ -27,6 +27,10 @@
   
   --meal-out-bg: #fce4ec;
   --meal-out-border: #f8bbd0;
+
+  /* 🌟 따로먹음 파스텔 보라/회색 톤 */
+  --meal-alone-bg: #f3e5f5;
+  --meal-alone-border: #e1bee7;
 }
 
 * { 
@@ -37,7 +41,7 @@
   -webkit-tap-highlight-color: transparent; 
 }
 
-/* 화면 바깥 여백 및 불필요한 스크롤 차단 */
+/* 화면 바깥 드래그/스크롤 방지 */
 html, body {
   width: 100%;
   height: 100vh;
@@ -55,7 +59,6 @@ html, body {
   font-family: 'Nanum Pen Script', 'Gaegu', cursive !important;
 }
 
-/* 모바일 앱 전용 풀 화면 컨테이너 */
 .app-container {
   width: 100%;
   max-width: 430px;
@@ -68,9 +71,10 @@ html, body {
   position: relative;
   box-shadow: 0 0 20px rgba(0,0,0,0.05);
   overflow: hidden;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-/* 🌟 헤더 높이 완벽 고정 (54px) */
+/* 헤더 높이 고정 */
 .header {
   height: 54px !important;
   min-height: 54px !important;
@@ -123,7 +127,6 @@ html, body {
   box-shadow: 0 2px 6px rgba(0,0,0,0.06); 
 }
 
-/* 🌟 메인 컨텐츠 영역 여백 최소화 (일요일 카드까지 안 잘리도록) */
 .content-area { 
   flex: 1; 
   overflow-y: auto; 
@@ -168,7 +171,7 @@ html, body {
 
 .loading-box { text-align: center; padding: 50px 0; color: var(--text-secondary); font-size: 1rem; }
 
-/* 🌟 주간 캘린더 피팅 */
+/* 주간 캘린더 */
 .weekly-list { display: flex; flex-direction: column; gap: 6px; flex: 1; overflow-y: auto; }
 .day-card { 
   background: var(--card-bg); 
@@ -186,6 +189,7 @@ html, body {
 .day-card.meal-home { background: var(--meal-home-bg); border-color: var(--meal-home-border); }
 .day-card.meal-delivery { background: var(--meal-delivery-bg); border-color: var(--meal-delivery-border); }
 .day-card.meal-out { background: var(--meal-out-bg); border-color: var(--meal-out-border); }
+.day-card.meal-alone { background: var(--meal-alone-bg); border-color: var(--meal-alone-border); }
 
 .day-info { display: flex; flex-direction: column; gap: 2px; flex: 1; cursor: pointer; }
 .day-name { font-size: 0.85rem; color: var(--text-secondary); }
@@ -217,6 +221,7 @@ html, body {
 .month-day-cell.meal-home { background: var(--meal-home-bg); }
 .month-day-cell.meal-delivery { background: var(--meal-delivery-bg); }
 .month-day-cell.meal-out { background: var(--meal-out-bg); }
+.month-day-cell.meal-alone { background: var(--meal-alone-bg); }
 
 .month-day-number { font-size: 0.8rem; color: var(--text-primary); align-self: flex-start; margin-left: 2px; margin-bottom: 1px; }
 
@@ -604,13 +609,13 @@ html, body {
 .stats-item-left { display: flex; align-items: center; gap: 8px; }
 .color-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
 
-/* 🌟 하단 네비 바 크기 조정 */
 .bottom-nav { 
   position: absolute; 
   bottom: 0; 
   left: 0; 
   right: 0; 
-  height: 60px; 
+  height: calc(64px + env(safe-area-inset-bottom, 0px)); 
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--card-bg); 
   display: flex; 
   border-top: 1px solid var(--border-color); 
@@ -654,7 +659,8 @@ html, body {
 .modal-content.large-modal { width: 92%; max-width: 400px; }
 .form-group { display: flex; flex-direction: column; gap: 4px; }
 
-.meal-type-group { display: flex; gap: 6px; margin-bottom: 2px; }
+/* 🌟 식사 구분 4개 탭 (집밥/배달/외식/따로먹음) */
+.meal-type-group { display: flex; gap: 4px; margin-bottom: 2px; }
 
 .meal-type-btn {
   flex: 1;
@@ -662,10 +668,11 @@ html, body {
   border: 1.5px solid var(--border-color);
   background: #f7f2ea;
   border-radius: 12px;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s;
+  text-align: center;
 }
 
 .meal-type-btn.active {
