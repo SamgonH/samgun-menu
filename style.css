@@ -737,10 +737,110 @@ html, body {
 .shopping-input-box input { flex: 1; padding: 10px 12px; border: 1.5px solid var(--border-color); border-radius: 12px; background: var(--bg-color); outline: none; font-size: 0.95rem; }
 
 .shopping-list { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; flex: 1; overflow-y: auto; }
-.shopping-item { background: var(--card-bg); padding: 12px 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow); }
-.shopping-item.checked span { text-decoration: line-through; color: #b0a8a0; }
-.shopping-item input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent-color); cursor: pointer; }
-.btn-delete-item { border: none; background: transparent; color: #e76f51; font-weight: bold; cursor: pointer; padding: 4px; }
+.shopping-item { background: var(--card-bg); padding: 12px 16px; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow); transition: background-color 0.2s; }
+.shopping-item-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.shopping-item-name { font-size: 1rem; color: var(--text-primary); word-break: break-word; }
+.shopping-item.checked .shopping-item-name { text-decoration: line-through; color: #b0a8a0; }
+.shopping-item input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent-color); cursor: pointer; flex-shrink: 0; }
+.btn-delete-item { border: none; background: transparent; color: #e76f51; font-weight: bold; cursor: pointer; padding: 4px 8px; font-size: 1.1rem; flex-shrink: 0; }
+
+/* 🌟 장보기 이월 뱃지 */
+.rollover-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #fdf2e9;
+  color: #d96b52;
+  border: 1px solid #f9d8c0;
+  border-radius: 6px;
+  padding: 2px 6px;
+  font-size: 0.75rem;
+  font-weight: normal;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.shopping-item.checked .rollover-badge {
+  background: #f0eae1;
+  color: #a09588;
+  border-color: #e2d7c8;
+}
+
+/* 🌟 메뉴 액션 선택 모달 */
+.meal-action-modal-content {
+  max-width: 320px;
+  text-align: center;
+  padding: 20px 18px;
+}
+.meal-action-menu-name {
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: var(--text-primary);
+  background: #fdfaf5;
+  border: 1.5px dashed #ebdccb;
+  border-radius: 14px;
+  padding: 10px 12px;
+  margin: 4px 0 8px 0;
+  word-break: break-word;
+}
+.meal-action-btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.action-recipe-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 12px;
+  background: var(--accent-color);
+  color: #ffffff;
+  border: none;
+  border-radius: 16px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(224, 122, 95, 0.25);
+  transition: all 0.2s;
+}
+.action-recipe-btn:not(:disabled):hover {
+  background: #d4684d;
+  transform: translateY(-1px);
+}
+.action-recipe-btn:not(:disabled):active {
+  transform: scale(0.98);
+}
+.action-recipe-btn:disabled {
+  background: #ece7de;
+  color: #ad9f90;
+  border: 1.5px solid #ded5c7;
+  box-shadow: none;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+.action-edit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 12px;
+  background: #f7f2ea;
+  color: var(--text-primary);
+  border: 1.5px solid #ebdccb;
+  border-radius: 14px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.action-edit-btn:hover {
+  background: #ede3d4;
+}
+.action-edit-btn:active {
+  transform: scale(0.98);
+}
 
 /* 커스텀 달력 모달 */
 .calendar-modal-content { max-width: 350px; padding: 18px; }
