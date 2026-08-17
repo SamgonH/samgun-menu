@@ -261,16 +261,125 @@ async function renderWeeklyView() {
       displayMenu = `${icon} ${meal.menu_name}`;
     }
 
-    card.innerHTML = `
-      <div class="day-info" onclick="openMealModal('${dateStr}', '${meal?.menu_name || ''}', '${meal?.icon || '🍲'}', '${meal?.meal_type || 'home'}', '${meal?.reason || ''}')">
-        <span class="day-name">${dateStr.slice(5)} (${dayNames[idx]})</span>
-        <span class="menu-text ${(!meal?.menu_name && meal?.meal_type !== 'alone') ? 'empty' : ''}">
-          ${displayMenu}
-        </span>
-      </div>
+    const dayInfo = document.createElement('div');
+    dayInfo.className = 'day-info';
+    dayInfo.innerHTML = `
+      <span class="day-name">${dateStr.slice(5)} (${dayNames[idx]})</span>
+      <span class="menu-text ${(!meal?.menu_name && meal?.meal_type !== 'alone') ? 'empty' : ''}">
+        ${displayMenu}
+      </span>
     `;
+    dayInfo.onclick = () => handleMealClick(dateStr, meal);
+
+    card.appendChild(dayInfo);
     weeklyList.appendChild(card);
   });
+}
+
+// 🌟 요일 클릭 핸들러: 메뉴가 이미 있으면 액션 팝업, 없으면 바로 등록 모달
+let currentActionMeal = null;
+let currentActionDateStr = null;
+let currentMatchedRecipe = null;
+
+async function handleMealClick(dateStr, meal) {
+  const hasMenu = meal && (meal.menu_name || meal.meal_type === 'alone');
+  if (!hasMenu) {
+    openMealModal(dateStr, '', '🍲', 'home', '');
+  } else {
+    await openMealActionModal(dateStr, meal);
+  }
+}
+
+// 🌟 레시피 확인 / 수정 선택 팝업
+async function openMealActionModal(dateStr, meal) {
+  currentActionDateStr = dateStr;
+  currentActionMeal = meal;
+  currentMatchedRecipe = null;
+
+  const parts = dateStr.split('-');
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+  const dayName = dayNames[d.getDay()];
+
+  document.getElementById('meal-action-date-title').innerText = `${parts[1]}월 ${parts[2]}일 (${dayName}) 메뉴`;
+
+  let menuDisplay = '';
+  if (meal.meal_type === 'alone') {
+    menuDisplay = `😭 따로먹음${meal.reason ? ` (${meal.reason})` : ''}`;
+  } else {
+    menuDisplay = `${meal.icon || '🍲'} ${meal.menu_name}`;
+  }
+  document.getElementById('meal-action-menu-name').innerText = menuDisplay;
+
+  const viewRecipeBtn = document.getElementById('btn-action-view-recipe');
+
+  // 레시피 검색 (집밥 메뉴이고 메뉴명이 있을 때만 매칭)
+  if (meal.menu_name && meal.meal_type !== 'alone') {
+    const trimmed = meal.menu_name.trim();
+    const { data: recipes } = await db.from('recipes')
+      .select('*')
+      .ilike('title', trimmed)
+      .limit(1);
+
+    if (recipes && recipes.length > 0) {
+      currentMatchedRecipe = recipes[0];
+    }
+  }
+
+  if (currentMatchedRecipe) {
+    viewRecipeBtn.disabled = false;
+    viewRecipeBtn.title = `'${currentMatchedRecipe.title}' 레시피 보기`;
+  } else {
+    viewRecipeBtn.disabled = true;
+    viewRecipeBtn.title = '등록된 레시피가 없습니다.';
+  }
+
+  document.getElementById('meal-action-modal').classList.remove('hidden');
+}
+
+// 액션 모달 이벤트 리스너
+document.getElementById('btn-action-view-recipe').addEventListener('click', async () => {
+  if (!currentMatchedRecipe) return;
+
+  document.getElementById('meal-action-modal').classList.add('hidden');
+  await navigateToRecipe(currentMatchedRecipe);
+});
+
+document.getElementById('btn-action-edit-meal').addEventListener('click', () => {
+  document.getElementById('meal-action-modal').classList.add('hidden');
+  if (currentActionMeal) {
+    openMealModal(
+      currentActionDateStr,
+      currentActionMeal.menu_name || '',
+      currentActionMeal.icon || '🍲',
+      currentActionMeal.meal_type || 'home',
+      currentActionMeal.reason || ''
+    );
+  } else {
+    openMealModal(currentActionDateStr, '', '🍲', 'home', '');
+  }
+});
+
+document.getElementById('btn-close-action-modal').addEventListener('click', () => {
+  document.getElementById('meal-action-modal').classList.add('hidden');
+});
+
+// 특정 레시피 상세 화면으로 직행하는 함수
+async function navigateToRecipe(recipe) {
+  switchMainTab('recipe');
+  currentRecipeCategory = recipe.category || '국&찌개';
+
+  document.querySelectorAll('.bookmark-tab').forEach(t => {
+    if (t.getAttribute('data-cat') === currentRecipeCategory) t.classList.add('active');
+    else t.classList.remove('active');
+  });
+
+  await loadRecipes();
+
+  const foundIdx = currentCategoryRecipes.findIndex(r => r.id === recipe.id);
+  if (foundIdx !== -1) {
+    openRecipeDetail(foundIdx);
+  }
 }
 
 // 식사 입력 모달
@@ -492,7 +601,7 @@ async function renderMonthlyView() {
     const cell = document.createElement('div');
     const mealTypeClass = meal?.meal_type ? `meal-${meal.meal_type}` : '';
     cell.className = `month-day-cell ${isToday ? 'today' : ''} ${mealTypeClass}`;
-    cell.onclick = () => openMealModal(dateStr, meal?.menu_name || '', meal?.icon || '🍲', meal?.meal_type || 'home', meal?.reason || '');
+    cell.onclick = () => handleMealClick(dateStr, meal);
 
     let textVal = meal?.menu_name || '';
     if (meal?.meal_type === 'alone') textVal = meal.reason ? `따로(${meal.reason})` : '따로먹음';
@@ -866,6 +975,40 @@ document.getElementById('next-shop-week').addEventListener('click', () => {
   loadShoppingList();
 });
 
+// 주차 문자열 레이블 생성 도우미 (예: "2026-08-03" -> "8월 1주차")
+function getWeekLabel(mondayDateStr) {
+  if (!mondayDateStr) return '';
+  const parts = mondayDateStr.split('-');
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  const info = getWeekInfo(d);
+  return `${info.month}월 ${info.weekNum}주차`;
+}
+
+// 장보기 아이템 파싱 (JSON 메타데이터 및 기존 일반 텍스트 데이터 호환)
+function parseShoppingItem(item) {
+  let name = item.item_name || '';
+  let originWeek = item.week_start_date;
+  let checkedWeek = item.is_checked ? item.week_start_date : null;
+
+  if (name.startsWith('{') && name.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(name);
+      if (parsed.name) name = parsed.name;
+      if (parsed.originWeek) originWeek = parsed.originWeek;
+      if (parsed.checkedWeek !== undefined) checkedWeek = parsed.checkedWeek;
+    } catch (e) {}
+  }
+
+  return {
+    id: item.id,
+    name: name,
+    originWeek: originWeek || item.week_start_date,
+    checkedWeek: item.is_checked ? (checkedWeek || item.week_start_date) : null,
+    is_checked: !!item.is_checked,
+    created_at: item.created_at
+  };
+}
+
 async function loadShoppingList() {
   const monday = getMonday(currentDate);
   const mondayStr = formatDateStr(monday.getFullYear(), monday.getMonth() + 1, monday.getDate());
@@ -882,25 +1025,71 @@ async function loadShoppingList() {
   const list = document.getElementById('shopping-list');
   list.innerHTML = '<div class="loading-box">🛒 장보기 목록을 불러오는 중...</div>';
 
-  const { data: items } = await db.from('shopping_items')
+  const { data: rawItems } = await db.from('shopping_items')
     .select('*')
-    .eq('week_start_date', mondayStr)
     .order('created_at', { ascending: true });
 
   list.innerHTML = '';
-  if (!items || items.length === 0) {
+  if (!rawItems || rawItems.length === 0) {
     list.innerHTML = '<div class="loading-box">사야 할 재료를 등록해 보세요!</div>';
     return;
   }
 
-  items.forEach(item => {
+  const allParsed = rawItems.map(parseShoppingItem);
+  const visibleItems = [];
+
+  allParsed.forEach(item => {
+    // 1. 최초 등록 주차가 현재 보고 있는 주차보다 미래이면 노출하지 않음
+    if (item.originWeek > mondayStr) return;
+
+    if (!item.is_checked) {
+      // 2. 아직 체크되지 않은 항목: 등록 주차 이후의 모든 주차에 계속 자동 이월되어 미체크로 표시
+      visibleItems.push({
+        ...item,
+        currentChecked: false,
+        isRollover: item.originWeek < mondayStr
+      });
+    } else {
+      // 3. 체크 완료된 항목:
+      // - 현재 주차가 체크 완료된 주차 이전: 그 당시에는 아직 체크 안 했으므로 미체크 상태로 표시
+      // - 현재 주차가 체크 완료된 주차와 동일: 이 주차에 체크 완료했으므로 체크 상태로 표시
+      // - 현재 주차가 체크 완료된 주차 이후: 이미 과거 주차에 구매 완료되었으므로 표시 안 함 (이월 종료)
+      const chkWeek = item.checkedWeek || item.originWeek;
+      if (mondayStr < chkWeek) {
+        visibleItems.push({
+          ...item,
+          currentChecked: false,
+          isRollover: item.originWeek < mondayStr
+        });
+      } else if (mondayStr === chkWeek) {
+        visibleItems.push({
+          ...item,
+          currentChecked: true,
+          isRollover: item.originWeek < mondayStr
+        });
+      }
+    }
+  });
+
+  if (visibleItems.length === 0) {
+    list.innerHTML = '<div class="loading-box">사야 할 재료를 등록해 보세요!</div>';
+    return;
+  }
+
+  visibleItems.forEach(item => {
     const itemDiv = document.createElement('div');
-    itemDiv.className = `shopping-item ${item.is_checked ? 'checked' : ''}`;
+    itemDiv.className = `shopping-item ${item.currentChecked ? 'checked' : ''}`;
+    
+    const badgeHtml = item.isRollover
+      ? `<span class="rollover-badge">📌 ${getWeekLabel(item.originWeek)} 등록</span>`
+      : '';
+
     itemDiv.innerHTML = `
-      <div style="display:flex; align-items:center; gap:10px;">
-        <input type="checkbox" ${item.is_checked ? 'checked' : ''} 
+      <div class="shopping-item-left">
+        <input type="checkbox" ${item.currentChecked ? 'checked' : ''} 
           onchange="toggleShoppingItem(${item.id}, this.checked)">
-        <span>${item.item_name}</span>
+        <span class="shopping-item-name">${item.name}</span>
+        ${badgeHtml}
       </div>
       <button class="btn-delete-item" onclick="deleteShoppingItem(${item.id})">✕</button>
     `;
@@ -915,13 +1104,49 @@ document.getElementById('btn-add-shopping').addEventListener('click', async () =
 
   const monday = getMonday(currentDate);
   const mondayStr = formatDateStr(monday.getFullYear(), monday.getMonth() + 1, monday.getDate());
-  await db.from('shopping_items').insert([{ week_start_date: mondayStr, item_name: itemName }]);
+  
+  const payload = {
+    name: itemName,
+    originWeek: mondayStr,
+    checkedWeek: null
+  };
+
+  await db.from('shopping_items').insert([{
+    week_start_date: mondayStr,
+    item_name: JSON.stringify(payload),
+    is_checked: false
+  }]);
+
   input.value = '';
   loadShoppingList();
 });
 
+// 엔터 키로도 장보기 항목 추가 지원
+document.getElementById('shopping-input').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    document.getElementById('btn-add-shopping').click();
+  }
+});
+
 async function toggleShoppingItem(id, isChecked) {
-  await db.from('shopping_items').update({ is_checked: isChecked }).eq('id', id);
+  const monday = getMonday(currentDate);
+  const currentMondayStr = formatDateStr(monday.getFullYear(), monday.getMonth() + 1, monday.getDate());
+
+  const { data: item } = await db.from('shopping_items').select('*').eq('id', id).single();
+  if (!item) return;
+
+  const parsed = parseShoppingItem(item);
+  const updatedPayload = {
+    name: parsed.name,
+    originWeek: parsed.originWeek,
+    checkedWeek: isChecked ? currentMondayStr : null
+  };
+
+  await db.from('shopping_items').update({
+    is_checked: isChecked,
+    item_name: JSON.stringify(updatedPayload)
+  }).eq('id', id);
+
   loadShoppingList();
 }
 
